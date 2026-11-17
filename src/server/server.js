@@ -15,6 +15,7 @@ import { secureContext } from '@defra/hapi-secure-context'
 import { contentSecurityPolicy } from './plugins/content-security-policy.js'
 import { metrics } from '@defra/cdp-metrics'
 import { cookieConsent } from '#/server/plugins/cookie-consent.js'
+import { entraAuth } from '#/server/plugins/entra-auth.js'
 import { csrf } from '#/server/plugins/csrf.js'
 
 export async function createServer() {
@@ -65,6 +66,7 @@ export async function createServer() {
     nunjucksConfig,
     Scooter,
     csrf,
+    entraAuth,
     cookieConsent,
     router // Register all the controllers/routes defined in src/server/router.js
   ])

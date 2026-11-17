@@ -1,0 +1,34 @@
+export function decodeJwtPayload(token) {
+  try {
+    return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
+  } catch {
+    return {}
+  }
+}
+
+function toRows(claims) {
+  return Object.entries(claims).map(([name, value]) => [
+    { text: name },
+    { text: typeof value === 'object' ? JSON.stringify(value) : String(value) }
+  ])
+}
+
+/**
+ * What goes in the session: only claims, never the tokens themselves.
+ * Access token claims (including app roles) are present only when the app
+ * asks for its own api scope.
+ */
+export function userFromCredentials({ accessToken, claims }, hasApiScope) {
+  const access =
+    hasApiScope && accessToken ? decodeJwtPayload(accessToken) : null
+  return {
+    name:
+      claims.name ??
+      claims.preferred_username ??
+      claims.email ??
+      'your account',
+    roles: access?.roles ?? [],
+    idTokenRows: toRows(claims),
+    accessTokenRows: access ? toRows(access) : null
+  }
+}

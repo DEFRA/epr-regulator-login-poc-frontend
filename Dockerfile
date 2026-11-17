@@ -31,6 +31,8 @@ ARG PARENT_VERSION
 LABEL uk.gov.defra.ffc.parent-image=defradigital/node:${PARENT_VERSION}
 
 ENV TZ="Europe/London"
+# Outbound calls to Entra ID and AWS STS go through the CDP proxy
+ENV NODE_USE_ENV_PROXY=true
 
 # Add curl to template.
 # CDP PLATFORM HEALTHCHECK REQUIREMENT
