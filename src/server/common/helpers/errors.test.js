@@ -23,7 +23,9 @@ describe('#errors', () => {
     })
 
     expect(result).toEqual(
-      expect.stringContaining('Page not found | epr-regulator-login-poc-frontend')
+      expect.stringContaining(
+        'Page not found | epr-regulator-login-poc-frontend'
+      )
     )
     expect(statusCode).toBe(statusCodes.notFound)
   })
