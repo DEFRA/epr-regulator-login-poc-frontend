@@ -251,6 +251,53 @@ export const config = convict({
       }
     }
   },
+  auth: {
+    baseUrl: {
+      doc: 'Public URL of this service, used for the sign-in redirect URI and the sign-out return URL',
+      format: String,
+      default: 'http://localhost:3000',
+      env: 'APP_BASE_URL'
+    },
+    entraId: {
+      authority: {
+        doc: 'Entra ID authority, https://login.microsoftonline.com/<tenant id>',
+        format: String,
+        default: '',
+        env: 'ENTRA_ID_AUTHORITY'
+      },
+      clientId: {
+        doc: 'Entra ID app registration client id',
+        format: String,
+        default: '',
+        env: 'ENTRA_ID_CLIENT_ID'
+      },
+      apiScope: {
+        doc: 'api://<client id>/.default, needed to receive app roles in the access token',
+        format: String,
+        default: '',
+        env: 'ENTRA_ID_API_SCOPE'
+      },
+      credentialType: {
+        doc: 'federated on CDP, secret for local development only',
+        format: ['federated', 'secret'],
+        default: 'federated',
+        env: 'ENTRA_ID_CREDENTIAL_TYPE'
+      },
+      clientSecret: {
+        doc: 'Client secret, local development only',
+        format: String,
+        default: '',
+        env: 'ENTRA_ID_CLIENT_SECRET',
+        sensitive: true
+      },
+      federatedAudience: {
+        doc: 'Audience of the federated credential on the app registration',
+        format: String,
+        default: 'epr-regulator-login-poc-frontend',
+        env: 'FEDERATED_CREDENTIALS_AUDIENCE'
+      }
+    }
+  },
   googleAnalytics: {
     googleTagManagerKey: {
       doc: 'Google Tag Manager container ID (e.g. GTM-XXXXXXXX)',

@@ -1,0 +1,32 @@
+{% extends 'layouts/page.njk' %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% block content %}
+  {{ appHeading({ text: heading, caption: "Signed in as " + user.name }) }}
+
+  <h2 class="govuk-heading-m">Roles</h2>
+  {% if user.roles | length %}
+    <p class="govuk-body">
+      {% for role in user.roles %}{{ govukTag({ text: role }) }} {% endfor %}
+    </p>
+  {% else %}
+    <p class="govuk-body">No roles in the access token.</p>
+  {% endif %}
+
+  <h2 class="govuk-heading-m">ID token claims</h2>
+  {{ govukTable({
+    firstCellIsHeader: true,
+    head: [{ text: "Claim" }, { text: "Value" }],
+    rows: user.idTokenRows
+  }) }}
+
+  {% if user.accessTokenRows %}
+    <h2 class="govuk-heading-m">Access token claims</h2>
+    {{ govukTable({
+      firstCellIsHeader: true,
+      head: [{ text: "Claim" }, { text: "Value" }],
+      rows: user.accessTokenRows
+    }) }}
+  {% endif %}
+{% endblock %}
