@@ -97,6 +97,17 @@ To run the application in `development` mode run:
 npm run dev
 ```
 
+#### Development over HTTPS (local sign-in)
+
+The Entra ID app registration only has `https://localhost:3000` redirect URIs, and the app itself only serves HTTP. To sign in locally run:
+
+```bash
+export ENTRA_ID_CLIENT_SECRET='<secret>'
+npm run dev:https
+```
+
+This starts the app on port 3001 and an HTTPS proxy on port 3000 (`scripts/dev-https.mjs`), then open `https://localhost:3000` and accept the self-signed certificate warning. It creates the certificate on first run in `node_modules/.cache/local-https` and needs `openssl`. It sets `PORT` and `APP_BASE_URL` for the run. For local use only, CDP does not use it. Also set `ENTRA_ID_CREDENTIAL_TYPE=secret`, `ENTRA_ID_AUTHORITY`, `ENTRA_ID_CLIENT_ID` and `ENTRA_ID_API_SCOPE` in `.env` (see the Entra ID section below).
+
 ### Production
 
 To mimic the application running in `production` mode locally run:
