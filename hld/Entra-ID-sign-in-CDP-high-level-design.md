@@ -126,7 +126,7 @@ Tokens are not refreshed, because none are kept. A service that later calls an A
 
 ## Where each piece of configuration lives
 
-The team controls the first three rows. The app registration is a set of requests to the Entra team, which take weeks. The AWS side is already set up globally by CDP.
+The team controls the first three rows. The app registration is a set of requests to CCOE, which take weeks. The AWS side is already set up globally by CDP.
 
 | What | Where it lives | Who changes it |
 | --- | --- | --- |
@@ -145,35 +145,35 @@ The design has only been tested against a fake Entra ID and a fake AWS STS. Thes
 
 - [ ] Run a real sign-in against `defradev` locally, then on CDP test.
 - [ ] Confirm on CDP test that Entra ID accepts the AWS STS token. CDP's global setup covers the permissions and the proxy, but only a real sign-in proves the token is accepted.
-- [ ] Agree the app registration names with the Entra team, and which request type creates a new registration in `defradev`.
+- [ ] Agree the app registration names with CCOE, and which request type creates a new registration in `defradev`.
 - [ ] Name the backend API scope, if the frontend will call a backend, and make sure the backend accepts Entra ID access tokens.
 - [ ] Keep the `/claims` debug page out of production, because it shows personal data.
 
 ## Setting up the app registration
 
-Once the service exists in CDP, its URL and task role exist too. The team then gathers the values below and raises ServiceNow requests with the Entra team, one set per app registration: one in the `Defra` tenant for prod, one for ext-test, and one in `defradev` shared by test, perf-test and local.
+Once the service exists in CDP, its URL and task role exist too. The team then gathers the values below and raises ServiceNow requests with CCOE, one set per app registration: one in the `Defra` tenant for prod, one for ext-test, and one in `defradev` shared by test, perf-test and local.
 
 ### Steps
 
 1. **Create the service in CDP and deploy it** to each environment. This gives it a URL, an ECS task role and an STS issuer.
 2. **Collect the values** in the table below for each environment.
-3. **Raise the new app registration request** (`00`). It is not a standard change, so check the catalogue item with the Entra team first.
-4. **Get the tenant ID and client ID back** from the Entra team.
+3. **Raise the new app registration request** (`00`). It is not a standard change, so check the catalogue item with CCOE first.
+4. **Get the tenant ID and client ID back** from CCOE.
 5. **Raise the standard changes** against the new registration: federated credentials (`01`), redirect URIs (`02`) and API permissions and scope (`04`).
 6. **Put the returned values into CDP app config** (`ENTRA_ID_AUTHORITY`, `ENTRA_ID_CLIENT_ID`, `ENTRA_ID_API_SCOPE`, `FEDERATED_CREDENTIALS_AUDIENCE`, `APP_BASE_URL`), add `SESSION_COOKIE_PASSWORD` as a CDP secret, and redeploy.
 7. **Test a real sign-in** on CDP test.
 
 The numbered requests match the drafts in `Entra-work/defradev` and `Entra-work/prod`. Nothing is needed from the CDP platform team: outbound identity federation, `sts:GetWebIdentityToken` and the proxy allow-list are already set up globally.
 
-### Values to give the Entra team
+### Values to give CCOE
 
 | Request | Value | Example | Where to get it |
 | --- | --- | --- | --- |
-| `00` new registration | Registration name | `cdp-waste-regulator-dashboard-fe-defradev` | Team decision, following the `cdp-<service>-<env>` pattern; confirm with the Entra team |
+| `00` new registration | Registration name | `cdp-waste-regulator-dashboard-fe-defradev` | Team decision, following the `cdp-<service>-<env>` pattern; confirm with CCOE |
 | `00` new registration | Tenant | `defradev` (6f504113-6b64-43f2-ade9-242e05780007) for test, perf-test and local; `Defra` (770a2450-0227-4c62-90c7-4e38537f1102) for prod and ext-test | The environment-to-tenant mapping (AMCR-592) |
 | `00` new registration | Account type and platform | Single tenant, Web | Fixed |
 | `00` new registration | Access token version | `requestedAccessTokenVersion: 2` | Fixed; Re-Ex found it is needed |
-| `00` new registration | Application ID URI | `api://<client id>` | Fixed; the Entra team fills in the client ID |
+| `00` new registration | Application ID URI | `api://<client id>` | Fixed; CCOE fills in the client ID |
 | `00` new registration | Client secret | None on CDP; one short-expiry secret on `defradev` for local development | Team decision (Q3) |
 | `00` new registration | Owners | Named people | Team decision |
 | `02` redirect URIs | Sign-in redirect URL | `https://<service>.<env>.cdp-int.defra.cloud/signin-oidc` | The service URL on the CDP portal, plus the route in the code |
@@ -190,7 +190,7 @@ The numbered requests match the drafts in `Entra-work/defradev` and `Entra-work/
 
 > The part of the issuer before `.tokens` is an ID, not the AWS account number. Ask CDP for the issuer itself rather than building it from the account ID.
 
-### Values the Entra team gives back
+### Values CCOE gives back
 
 | Value | Where it goes |
 | --- | --- |
