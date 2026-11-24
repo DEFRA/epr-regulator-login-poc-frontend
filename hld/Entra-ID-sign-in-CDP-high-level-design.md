@@ -6,18 +6,18 @@ The proof-of-concept service from AMCR-671 is `epr-regulator-login-poc-frontend`
 
 ## Spike questions at a glance
 
-| # | Question | Answer | Section |
-| --- | --- | --- | --- |
-| Q1 | What is the design: components, sign-in flow, where configuration lives? | A Hapi frontend using `@defra/hapi-auth-oidc`, the authorization code flow with PKCE, and a server-side session that holds claims only. Configuration is split between CDP app config, CDP secrets and the Entra ID app registration | Components, Sign-in flow, Configuration |
-| Q2 | Which existing code do we build from? | `@defra/hapi-auth-oidc`, following `waste-disposal-fee-frontend` | Decisions |
-| Q3 | Client secret or federated credential? | A federated credential on CDP; a client secret only for local development | Decisions |
-| Q4 | Which environments need real Entra ID for the proof of concept? | Local, dev and test | Environments |
-| Q5 | Should dev use `defradev` or the stub? | `defradev`. The stub stays for automated tests and offline local work (AMCR-594) | Environments |
-| Q6 | What does each environment need? | One shared `defradev` registration, a redirect URL pair per environment, a federated credential per CDP environment, a session secret; proxy access is already in place | What each environment needs |
-| Q7 | One `defradev` registration or one each? | One registration for local, dev and test, with a redirect URL and federated credential for each | One registration or several |
-| Q8 | How are `defradev` test users created and given app roles, and by whom? | Proposed: CCOE creates the users and a test group; the group is assigned to the app role; testers are added to the group. To confirm with CCOE | Test users and app roles |
-| Q9 | Is there a living design document? | This document. It still needs moving to Confluence and linking from AMCR-498 | Design document and demo |
-| Q10 | Has the design been shown to the team and agreed? | Not yet | Design document and demo |
+| #   | Question                                                                 | Answer                                                                                                                                                                                                                               | Section                                 |
+| --- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| Q1  | What is the design: components, sign-in flow, where configuration lives? | A Hapi frontend using `@defra/hapi-auth-oidc`, the authorization code flow with PKCE, and a server-side session that holds claims only. Configuration is split between CDP app config, CDP secrets and the Entra ID app registration | Components, Sign-in flow, Configuration |
+| Q2  | Which existing code do we build from?                                    | `@defra/hapi-auth-oidc`, following `waste-disposal-fee-frontend`                                                                                                                                                                     | Decisions                               |
+| Q3  | Client secret or federated credential?                                   | A federated credential on CDP; a client secret only for local development                                                                                                                                                            | Decisions                               |
+| Q4  | Which environments need real Entra ID for the proof of concept?          | Local, dev and test                                                                                                                                                                                                                  | Environments                            |
+| Q5  | Should dev use `defradev` or the stub?                                   | `defradev`. The stub stays for automated tests and offline local work (AMCR-594)                                                                                                                                                     | Environments                            |
+| Q6  | What does each environment need?                                         | One shared `defradev` registration, a redirect URL pair per environment, a federated credential per CDP environment, a session secret; proxy access is already in place                                                              | What each environment needs             |
+| Q7  | One `defradev` registration or one each?                                 | One registration for local, dev and test, with a redirect URL and federated credential for each                                                                                                                                      | One registration or several             |
+| Q8  | How are `defradev` test users created and given app roles, and by whom?  | Proposed: CCOE creates the users and a test group; the group is assigned to the app role; testers are added to the group. To confirm with CCOE                                                                                       | Test users and app roles                |
+| Q9  | Is there a living design document?                                       | This document. It still needs moving to Confluence and linking from AMCR-498                                                                                                                                                         | Design document and demo                |
+| Q10 | Has the design been shown to the team and agreed?                        | Not yet                                                                                                                                                                                                                              | Design document and demo                |
 
 ## Decisions
 
@@ -25,11 +25,11 @@ The proof-of-concept service from AMCR-671 is `epr-regulator-login-poc-frontend`
 
 Use CDP's `@defra/hapi-auth-oidc` library (version 0.6.1 in the proof of concept). It runs the sign-in flow, PKCE and token checks, and supports a federated credential through its `WebIdentityTokenProvider`. `waste-disposal-fee-frontend` already uses it with a federated credential on CDP, so it is the reference app.
 
-| Candidate | Decision |
-| --- | --- |
-| `@defra/hapi-auth-oidc` (CDP) | **Chosen.** Supports a federated credential (AWS STS) on CDP and a client secret for local development |
-| `@defra/hapi-oidc-auth` (pesticides team) | Not chosen. Client secret only: no AWS STS or federated credential support |
-| `epr-frontend` `src/server/auth/plugins/entra-id.js` (Re-Ex) | Not chosen. Re-Ex's own code, not a shared library, and it uses a client secret |
+| Candidate                                                    | Decision                                                                                               |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `@defra/hapi-auth-oidc` (CDP)                                | **Chosen.** Supports a federated credential (AWS STS) on CDP and a client secret for local development |
+| `@defra/hapi-oidc-auth` (pesticides team)                    | Not chosen. Client secret only: no AWS STS or federated credential support                             |
+| `epr-frontend` `src/server/auth/plugins/entra-id.js` (Re-Ex) | Not chosen. Re-Ex's own code, not a shared library, and it uses a client secret                        |
 
 > **Watch the names.** `@defra/hapi-auth-oidc` and `@defra/hapi-oidc-auth` differ only in word order and are easily confused. Only the first uses AWS STS: version 0.6.1 depends on `@aws-sdk/client-sts` and calls `GetWebIdentityToken` in `src/providers/web-identity.js`. `@defra/hapi-oidc-auth` 0.4.0 has no AWS dependency and requires a `clientSecret`. Always write the full package name.
 
@@ -70,15 +70,15 @@ The frontend is the only part we write. It reaches Entra ID through the CDP outb
 
 Seven parts work together; only the frontend is code we write.
 
-| Component | What it is | What it does in sign-in |
-| --- | --- | --- |
-| Regulator's browser | The regulator's own browser | Follows redirects between the frontend and Entra ID; holds only a session cookie, never tokens |
-| CDP frontend | A Hapi app on AWS ECS Fargate (in the proof of concept, `epr-regulator-login-poc-frontend`) using `@defra/hapi-auth-oidc` | Starts sign-in, receives the code back, exchanges it for tokens, checks them and keeps the user's claims in the session |
-| Session store | `@hapi/yar`, always stored server-side: Redis on CDP, memory locally | Keeps the user's claims between page loads; the tokens themselves are never stored |
-| Entra ID | Defra's identity service: the `Defra` tenant for ext-test and prod, `defradev` for local, dev, test and perf-test | Signs the regulator in (including MFA), then issues an ID token and an access token |
-| App registration | Entra ID's record of the service | Holds the client ID, the allowed redirect URLs, the API scope and the federated credential |
-| AWS STS | AWS's token service, called with the ECS task role | Gives the frontend a short-lived token that proves which service it is, so no client secret is needed |
-| CDP outbound proxy | CDP's egress proxy | Lets the frontend reach `login.microsoftonline.com` and AWS STS; already allowed globally by CDP |
+| Component           | What it is                                                                                                                | What it does in sign-in                                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Regulator's browser | The regulator's own browser                                                                                               | Follows redirects between the frontend and Entra ID; holds only a session cookie, never tokens                          |
+| CDP frontend        | A Hapi app on AWS ECS Fargate (in the proof of concept, `epr-regulator-login-poc-frontend`) using `@defra/hapi-auth-oidc` | Starts sign-in, receives the code back, exchanges it for tokens, checks them and keeps the user's claims in the session |
+| Session store       | `@hapi/yar`, always stored server-side: Redis on CDP, memory locally                                                      | Keeps the user's claims between page loads; the tokens themselves are never stored                                      |
+| Entra ID            | Defra's identity service: the `Defra` tenant for ext-test and prod, `defradev` for local, dev, test and perf-test         | Signs the regulator in (including MFA), then issues an ID token and an access token                                     |
+| App registration    | Entra ID's record of the service                                                                                          | Holds the client ID, the allowed redirect URLs, the API scope and the federated credential                              |
+| AWS STS             | AWS's token service, called with the ECS task role                                                                        | Gives the frontend a short-lived token that proves which service it is, so no client secret is needed                   |
+| CDP outbound proxy  | CDP's egress proxy                                                                                                        | Lets the frontend reach `login.microsoftonline.com` and AWS STS; already allowed globally by CDP                        |
 
 ## Sign-in flow
 
@@ -143,27 +143,27 @@ Tokens are not refreshed, because none are kept. A service that later calls an A
 
 We control the first three rows. The app registration is a set of requests to CCOE, which take weeks. The AWS side is already set up globally by CDP.
 
-| What | Where it lives | Who changes it |
-| --- | --- | --- |
-| `ENTRA_ID_AUTHORITY` (holds the tenant ID), `ENTRA_ID_CLIENT_ID`, `ENTRA_ID_API_SCOPE`, `ENTRA_ID_CREDENTIAL_TYPE`, `FEDERATED_CREDENTIALS_AUDIENCE`, `APP_BASE_URL` | CDP app config, one set per environment | Us |
-| Session cookie password (`SESSION_COOKIE_PASSWORD`) | CDP secrets, per environment | Us |
-| Client secret for local development (`ENTRA_ID_CLIENT_SECRET`) | A developer's local environment file, `defradev` only, never in CDP | Us |
-| Redirect URL `/signin-oidc`, sign-out return `/signed-out`, access token version 2, API scope, federated credential | Entra ID app registration, one per tenant | Entra team, through ServiceNow requests |
-| ECS task role, `sts:GetWebIdentityToken` permission, outbound identity federation | The CDP AWS account for each environment | Already set up globally by CDP |
-| `login.microsoftonline.com` and AWS STS allowed out | CDP outbound proxy | Already set up globally by CDP |
+| What                                                                                                                                                                 | Where it lives                                                      | Who changes it                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | --------------------------------------- |
+| `ENTRA_ID_AUTHORITY` (holds the tenant ID), `ENTRA_ID_CLIENT_ID`, `ENTRA_ID_API_SCOPE`, `ENTRA_ID_CREDENTIAL_TYPE`, `FEDERATED_CREDENTIALS_AUDIENCE`, `APP_BASE_URL` | CDP app config, one set per environment                             | Us                                      |
+| Session cookie password (`SESSION_COOKIE_PASSWORD`)                                                                                                                  | CDP secrets, per environment                                        | Us                                      |
+| Client secret for local development (`ENTRA_ID_CLIENT_SECRET`)                                                                                                       | A developer's local environment file, `defradev` only, never in CDP | Us                                      |
+| Redirect URL `/signin-oidc`, sign-out return `/signed-out`, access token version 2, API scope, federated credential                                                  | Entra ID app registration, one per tenant                           | Entra team, through ServiceNow requests |
+| ECS task role, `sts:GetWebIdentityToken` permission, outbound identity federation                                                                                    | The CDP AWS account for each environment                            | Already set up globally by CDP          |
+| `login.microsoftonline.com` and AWS STS allowed out                                                                                                                  | CDP outbound proxy                                                  | Already set up globally by CDP          |
 
 The audience must be the same in `FEDERATED_CREDENTIALS_AUDIENCE` and on the federated credential. The redirect URLs are built from `APP_BASE_URL` and matched exactly. A typo in either breaks sign-in.
 
 ## Environments (Q4 and Q5)
 
-| Environment | Tenant | Real Entra ID for the proof of concept? | How the service proves its identity |
-| --- | --- | --- | --- |
-| Local | `defradev` | **Yes.** Developers build and debug against it | Client secret in a local `.env` file |
-| dev | `defradev` (not the stub) | **Yes.** The first CDP environment, where it is developed and shown working | Federated credential |
-| test | `defradev` | **Yes.** Where testers and the wider team see it working | Federated credential |
-| perf-test | `defradev` | Not for the proof of concept | Federated credential, when needed |
-| ext-test | `Defra` | Not for the proof of concept | Federated credential; registration by change request, which takes weeks |
-| prod | `Defra` | Not for the proof of concept | As ext-test |
+| Environment | Tenant                    | Real Entra ID for the proof of concept?                                     | How the service proves its identity                                     |
+| ----------- | ------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Local       | `defradev`                | **Yes.** Developers build and debug against it                              | Client secret in a local `.env` file                                    |
+| dev         | `defradev` (not the stub) | **Yes.** The first CDP environment, where it is developed and shown working | Federated credential                                                    |
+| test        | `defradev`                | **Yes.** Where testers and the wider team see it working                    | Federated credential                                                    |
+| perf-test   | `defradev`                | Not for the proof of concept                                                | Federated credential, when needed                                       |
+| ext-test    | `Defra`                   | Not for the proof of concept                                                | Federated credential; registration by change request, which takes weeks |
+| prod        | `Defra`                   | Not for the proof of concept                                                | As ext-test                                                             |
 
 **Q4: local, dev and test need real Entra ID.** Local is where the sign-in is built. dev and test run on CDP, so they are where the federated credential and the proxy are proved, and where other people can see it working.
 
@@ -177,14 +177,14 @@ The stub (AMCR-594) stays for automated tests, and for local work where a develo
 
 ## What each environment needs (Q6)
 
-| Need | Local | dev | test |
-| --- | --- | --- | --- |
-| App registration | The shared `defradev` registration (Q7) | Same | Same |
-| Redirect URLs | `http://localhost:3000/signin-oidc` and `/signed-out` | `https://epr-regulator-login-poc-frontend.dev.cdp-int.defra.cloud/signin-oidc` and `/signed-out` | `https://epr-regulator-login-poc-frontend.test.cdp-int.defra.cloud/signin-oidc` and `/signed-out` |
-| Proving identity | Client secret | Federated credential for the dev task role | Federated credential for the test task role |
-| Secrets | `ENTRA_ID_CLIENT_SECRET` and `SESSION_COOKIE_PASSWORD` in a local `.env` file, never committed | `SESSION_COOKIE_PASSWORD` in CDP secrets; no client secret | Same as dev |
-| Proxy access | None needed | `login.microsoftonline.com` and AWS STS, already allowed by CDP | Same as dev |
-| App config | Local `.env` file | CDP app config: `ENTRA_ID_AUTHORITY`, `ENTRA_ID_CLIENT_ID`, `ENTRA_ID_API_SCOPE`, `FEDERATED_CREDENTIALS_AUDIENCE`, `APP_BASE_URL` | Same as dev, with test values |
+| Need             | Local                                                                                          | dev                                                                                                                                | test                                                                                              |
+| ---------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| App registration | The shared `defradev` registration (Q7)                                                        | Same                                                                                                                               | Same                                                                                              |
+| Redirect URLs    | `http://localhost:3000/signin-oidc` and `/signed-out`                                          | `https://epr-regulator-login-poc-frontend.dev.cdp-int.defra.cloud/signin-oidc` and `/signed-out`                                   | `https://epr-regulator-login-poc-frontend.test.cdp-int.defra.cloud/signin-oidc` and `/signed-out` |
+| Proving identity | Client secret                                                                                  | Federated credential for the dev task role                                                                                         | Federated credential for the test task role                                                       |
+| Secrets          | `ENTRA_ID_CLIENT_SECRET` and `SESSION_COOKIE_PASSWORD` in a local `.env` file, never committed | `SESSION_COOKIE_PASSWORD` in CDP secrets; no client secret                                                                         | Same as dev                                                                                       |
+| Proxy access     | None needed                                                                                    | `login.microsoftonline.com` and AWS STS, already allowed by CDP                                                                    | Same as dev                                                                                       |
+| App config       | Local `.env` file                                                                              | CDP app config: `ENTRA_ID_AUTHORITY`, `ENTRA_ID_CLIENT_ID`, `ENTRA_ID_API_SCOPE`, `FEDERATED_CREDENTIALS_AUDIENCE`, `APP_BASE_URL` | Same as dev, with test values                                                                     |
 
 The hostnames follow CDP's `<service>.<env>.cdp-int.defra.cloud` pattern; check each one on the CDP portal before raising the request. If the federated credential cannot be made to work in an environment, the fallback is a client secret held in that environment's CDP secrets, never in code or config files.
 
@@ -247,37 +247,37 @@ Nothing is needed from the CDP platform team: outbound identity federation, `sts
 
 ### Values to give CCOE
 
-| Request | Value | Example | Where to get it |
-| --- | --- | --- | --- |
-| `00` new registration | Registration name | The name in RITM1491038, for example `cdp-<service>-defradev` | Our decision, following the `cdp-<service>-<env>` pattern; confirm with CCOE |
-| `00` new registration | Tenant | `defradev` (6f504113-6b64-43f2-ade9-242e05780007) for local, dev, test and perf-test; `Defra` (770a2450-0227-4c62-90c7-4e38537f1102) for ext-test and prod | The environment-to-tenant mapping (AMCR-592) |
-| `00` new registration | Account type and platform | Single tenant, Web | Fixed |
-| `00` new registration | Access token version | `requestedAccessTokenVersion: 2` | Fixed; Re-Ex found it is needed |
-| `00` new registration | Application ID URI | `api://<client id>` | Fixed; CCOE fills in the client ID |
-| `00` new registration | Client secret | None on CDP; one short-expiry secret on `defradev` for local development | Our decision (Q3) |
-| `00` new registration | Owners | Named people | Our decision |
-| `02` redirect URIs | Sign-in redirect URL | `https://<service>.<env>.cdp-int.defra.cloud/signin-oidc` | The service URL on the CDP portal, plus the route in the code |
-| `02` redirect URIs | Sign-out return URL | `https://<service>.<env>.cdp-int.defra.cloud/signed-out` | As above |
-| `02` redirect URIs | Local URLs (`defradev` only) | `http://localhost:<port>/signin-oidc` and `/signed-out` | The app's local port (3000 in the proof of concept) |
-| `01` federated credential | Issuer | `https://<id>.tokens.sts.global.api.aws` | CDP, per AWS account; the proof of concept README says the service can read it as `CDP_JWT_ISSUER` |
-| `01` federated credential | Subject type | Explicit subject identifier | Fixed |
-| `01` federated credential | Subject value | `arn:aws:iam::<account id>:role/<service name>` | The service's ECS task role ARN, from CDP |
-| `01` federated credential | Audience | `epr-regulator-login-poc-frontend` | Our decision; must equal `FEDERATED_CREDENTIALS_AUDIENCE` |
-| `01` federated credential | Credential name and description | `cdp-<service>-defradev-test` | Our decision, one per CDP environment |
-| `04` API permissions | Microsoft Graph `User.Read` (delegated) | | Usually there by default on a new registration |
-| `04` API permissions | Exposed API scope | `api://<client id>/.default` | Needed so the access token is issued for the app's own API |
-| `04` API permissions | Backend API scopes | | Only if the frontend calls a backend: ask the backend team |
-| `03` app roles | Test app role: value, display name, member type Users/Groups | A role value we agree | Our decision (Q8) |
-| `03` app roles | Group assigned to the role | A `defradev` test group | Created by CCOE (Q8) |
+| Request                   | Value                                                        | Example                                                                                                                                                    | Where to get it                                                                                    |
+| ------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `00` new registration     | Registration name                                            | The name in RITM1491038, for example `cdp-<service>-defradev`                                                                                              | Our decision, following the `cdp-<service>-<env>` pattern; confirm with CCOE                       |
+| `00` new registration     | Tenant                                                       | `defradev` (6f504113-6b64-43f2-ade9-242e05780007) for local, dev, test and perf-test; `Defra` (770a2450-0227-4c62-90c7-4e38537f1102) for ext-test and prod | The environment-to-tenant mapping (AMCR-592)                                                       |
+| `00` new registration     | Account type and platform                                    | Single tenant, Web                                                                                                                                         | Fixed                                                                                              |
+| `00` new registration     | Access token version                                         | `requestedAccessTokenVersion: 2`                                                                                                                           | Fixed; Re-Ex found it is needed                                                                    |
+| `00` new registration     | Application ID URI                                           | `api://<client id>`                                                                                                                                        | Fixed; CCOE fills in the client ID                                                                 |
+| `00` new registration     | Client secret                                                | None on CDP; one short-expiry secret on `defradev` for local development                                                                                   | Our decision (Q3)                                                                                  |
+| `00` new registration     | Owners                                                       | Named people                                                                                                                                               | Our decision                                                                                       |
+| `02` redirect URIs        | Sign-in redirect URL                                         | `https://<service>.<env>.cdp-int.defra.cloud/signin-oidc`                                                                                                  | The service URL on the CDP portal, plus the route in the code                                      |
+| `02` redirect URIs        | Sign-out return URL                                          | `https://<service>.<env>.cdp-int.defra.cloud/signed-out`                                                                                                   | As above                                                                                           |
+| `02` redirect URIs        | Local URLs (`defradev` only)                                 | `http://localhost:<port>/signin-oidc` and `/signed-out`                                                                                                    | The app's local port (3000 in the proof of concept)                                                |
+| `01` federated credential | Issuer                                                       | `https://<id>.tokens.sts.global.api.aws`                                                                                                                   | CDP, per AWS account; the proof of concept README says the service can read it as `CDP_JWT_ISSUER` |
+| `01` federated credential | Subject type                                                 | Explicit subject identifier                                                                                                                                | Fixed                                                                                              |
+| `01` federated credential | Subject value                                                | `arn:aws:iam::<account id>:role/<service name>`                                                                                                            | The service's ECS task role ARN, from CDP                                                          |
+| `01` federated credential | Audience                                                     | `epr-regulator-login-poc-frontend`                                                                                                                         | Our decision; must equal `FEDERATED_CREDENTIALS_AUDIENCE`                                          |
+| `01` federated credential | Credential name and description                              | `cdp-<service>-defradev-test`                                                                                                                              | Our decision, one per CDP environment                                                              |
+| `04` API permissions      | Microsoft Graph `User.Read` (delegated)                      |                                                                                                                                                            | Usually there by default on a new registration                                                     |
+| `04` API permissions      | Exposed API scope                                            | `api://<client id>/.default`                                                                                                                               | Needed so the access token is issued for the app's own API                                         |
+| `04` API permissions      | Backend API scopes                                           |                                                                                                                                                            | Only if the frontend calls a backend: ask the backend team                                         |
+| `03` app roles            | Test app role: value, display name, member type Users/Groups | A role value we agree                                                                                                                                      | Our decision (Q8)                                                                                  |
+| `03` app roles            | Group assigned to the role                                   | A `defradev` test group                                                                                                                                    | Created by CCOE (Q8)                                                                               |
 
 > The part of the issuer before `.tokens` is an ID, not the AWS account number. Ask CDP for the issuer itself rather than building it from the account ID.
 
 ### Values CCOE gives back
 
-| Value | Where it goes |
-| --- | --- |
-| Tenant ID | `ENTRA_ID_AUTHORITY` = `https://login.microsoftonline.com/<tenant id>`, in CDP app config |
-| Client ID | `ENTRA_ID_CLIENT_ID`, and `ENTRA_ID_API_SCOPE` = `api://<client id>/.default`, in CDP app config |
-| Local client secret (`defradev` only) | A developer's local `.env` file, never CDP |
+| Value                                 | Where it goes                                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Tenant ID                             | `ENTRA_ID_AUTHORITY` = `https://login.microsoftonline.com/<tenant id>`, in CDP app config        |
+| Client ID                             | `ENTRA_ID_CLIENT_ID`, and `ENTRA_ID_API_SCOPE` = `api://<client id>/.default`, in CDP app config |
+| Local client secret (`defradev` only) | A developer's local `.env` file, never CDP                                                       |
 
 The test app role (`03`) is there so test users can be given a role in the proof of concept (Q8). Who gets access in production, and how it is removed, is left to AMCR-540 Q5 and AMCR-541.
