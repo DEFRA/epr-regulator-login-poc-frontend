@@ -11,6 +11,7 @@
   "scripts": {
     "build:frontend": "vite build",
     "dev": "AWS_EMF_ENVIRONMENT=Local npm run server:watch",
+    "dev:https": "node scripts/dev-https.mjs",
     "dev:debug": "AWS_EMF_ENVIRONMENT=Local npm run server:debug",
     "docker:dev": "npm run dev",
     "format": "prettier --write \"src/**/*.js\" \"**/*.{js,cjs,md,json,config.js,test.js}\"",
@@ -38,6 +39,7 @@
   "dependencies": {
     "@defra/cdp-auditing": "0.7.0",
     "@defra/cdp-metrics": "0.6.1",
+    "@defra/hapi-auth-oidc": "0.6.1",
     "@defra/hapi-secure-context": "0.4.2",
     "@defra/hapi-tracing": "1.30.2",
     "@elastic/ecs-pino-format": "1.5.0",

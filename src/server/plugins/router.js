@@ -1,6 +1,8 @@
 import inert from '@hapi/inert'
 
 import { home } from '../routes/home/index.js'
+import { auth } from '../routes/auth/index.js'
+import { claims } from '../routes/claims/index.js'
 import { about } from '../routes/about/index.js'
 import { health } from '../routes/health/index.js'
 import { cookies } from '../routes/cookies/controller.js'
@@ -18,7 +20,7 @@ export const router = {
       await server.register([cookies])
 
       // Application specific routes, add your own routes here
-      await server.register([home, about])
+      await server.register([home, about, auth, claims])
 
       // Static assets
       if (!config.get('isProduction') && !config.get('isTest')) {
