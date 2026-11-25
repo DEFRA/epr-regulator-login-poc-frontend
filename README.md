@@ -288,4 +288,3 @@ sequenceDiagram
 ```
 
 If the code exchange or the state check fails, the app shows a 401 "Sign in failed" page. If Entra cannot be reached when sign-in starts (discovery or STS fails), it shows a 503 "Sign in unavailable" page. If the Entra settings are missing, `/signin-oidc` shows a 503 "Sign in is not configured" page. The STS client may swallow an STS error, in which case the failure only shows at the token exchange as a 401. Locally (`ENTRA_ID_CREDENTIAL_TYPE=secret`) the STS steps are skipped and the token request sends `client_secret` instead of `client_assertion`.
-
