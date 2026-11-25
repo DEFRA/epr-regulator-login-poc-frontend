@@ -2,7 +2,7 @@
 
 This is the design for AMCR-662 and answers its ten spike questions: the design for Entra ID sign-in on a CDP frontend (Q1), the code to build it from (Q2), how the service proves its identity to Entra ID (Q3), which environments need real Entra ID and what each needs (Q4 to Q8), and the design document and demo themselves (Q9, Q10). Regulators sign in with Defra's Entra ID using the authorization code flow with PKCE, and on CDP the service proves who it is with a federated credential from AWS instead of a client secret.
 
-The proof-of-concept service from AMCR-671 is `epr-regulator-login-poc-frontend`; its `main` branch has the sign-in code (merged from `elsp-486-entra-claims-poc`). It is deployed to CDP dev, where sign-in against `defradev` is confirmed working. App roles appear here only so test users can be given one (Q8). Who gets access in production, and how it is removed, belongs to AMCR-540 Q5 and AMCR-541.
+The proof-of-concept service from AMCR-671 is `epr-regulator-login-poc-frontend`; its `main` branch has the sign-in code (merged from `elsp-486-entra-claims-poc`). It is deployed to CDP dev. Sign-in against `defradev` is confirmed working locally and on CDP dev; it has not been tested on CDP test yet. App roles appear here only so test users can be given one (Q8). Who gets access in production, and how it is removed, belongs to AMCR-540 Q5 and AMCR-541.
 
 ## Spike questions at a glance
 
@@ -222,14 +222,14 @@ Still to find out: who in CCOE does this, through which request type, and how lo
 ## Design document and demo (Q9 and Q10)
 
 - **Q9, the living design document:** this document. A Markdown copy is in the proof-of-concept repo under `hld/` on `main`. The ticket asks for it to live on Confluence, so both teams can edit it and it outlives the proof-of-concept service, linked from AMCR-498. Each later ticket (AMCR-540, AMCR-594, AMCR-541) should update it.
-- **Q10, demo and agreement:** not done yet. Present this design to the wider team and record the agreement on AMCR-662. The proof of concept's `main` branch already has the sign-in code, deployed to dev and confirmed working, so the demo can show the design working.
+- **Q10, demo and agreement:** not done yet. Present this design to the wider team and record the agreement on AMCR-662. The proof of concept's `main` branch already has the sign-in code, confirmed working locally and on dev (not yet on test), so the demo can show the design working.
 
 ## Open points
 
-Sign-in is confirmed working on CDP dev against `defradev`. These points still need settling before AMCR-544 builds on it.
+Sign-in is confirmed working against `defradev` locally and on CDP dev. CDP test has not been tested yet. These points still need settling before AMCR-544 builds on it.
 
-- [x] Sign in against `defradev` on CDP dev. This also proves Entra ID accepts the AWS STS token.
-- [ ] Run a real sign-in locally and on CDP test.
+- [x] Sign in against `defradev` locally and on CDP dev. On dev this also proves Entra ID accepts the AWS STS token.
+- [ ] Run a real sign-in on CDP test, once test's own registration is in place.
 - [ ] Agree the app registration names with CCOE, and which request type creates a new registration in `defradev`.
 - [ ] Name the backend API scope, if the frontend will call a backend, and make sure the backend accepts Entra ID access tokens.
 - [ ] Keep the `/claims` debug page out of production, because it shows personal data.
