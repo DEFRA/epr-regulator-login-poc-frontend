@@ -134,6 +134,27 @@ describe('#auth controller', () => {
       )
     })
 
+    test('Sends the ID token as a hint so Entra signs out without asking', async () => {
+      await start({ ...entraSettings, 'auth.baseUrl': `${BASE_URL}/` })
+      server.plugins['hapi-auth-oidc'].oidc.callback = vi.fn(async () => ({
+        accessToken: fakeJwt({}),
+        idToken: 'the-id-token',
+        claims: { name: 'Test User' }
+      }))
+      const signIn = await server.inject('/signin-oidc?code=abc&state=xyz')
+      const cookie = signIn.headers['set-cookie']
+        .find((c) => c.startsWith('session='))
+        .split(';')[0]
+
+      const response = await server.inject({
+        url: '/logout',
+        headers: { cookie }
+      })
+      const location = new URL(response.headers.location)
+
+      expect(location.searchParams.get('id_token_hint')).toBe('the-id-token')
+    })
+
     test('Does not fail when Entra is not configured', async () => {
       await start({ ...entraSettings, 'auth.entraId.authority': '' })
 
