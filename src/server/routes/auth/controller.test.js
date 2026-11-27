@@ -139,7 +139,7 @@ describe('#auth controller', () => {
       server.plugins['hapi-auth-oidc'].oidc.callback = vi.fn(async () => ({
         accessToken: fakeJwt({}),
         idToken: 'the-id-token',
-        claims: { name: 'Test User' }
+        claims: { name: 'Test User', login_hint: 'hint-123' }
       }))
       const signIn = await server.inject('/signin-oidc?code=abc&state=xyz')
       const cookie = signIn.headers['set-cookie']
@@ -153,6 +153,7 @@ describe('#auth controller', () => {
       const location = new URL(response.headers.location)
 
       expect(location.searchParams.get('id_token_hint')).toBe('the-id-token')
+      expect(location.searchParams.get('logout_hint')).toBe('hint-123')
     })
 
     test('Sends no hint when there is no ID token or it is too long', async () => {
