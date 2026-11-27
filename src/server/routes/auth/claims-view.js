@@ -6,42 +6,28 @@ export function decodeJwtPayload(token) {
   }
 }
 
-const SENSITIVE_CLAIMS = new Set([
-  'name',
-  'preferred_username',
-  'email',
-  'upn',
-  'unique_name',
-  'oid',
-  'sub',
-  'tid',
-  'aud',
-  'azp',
-  'appid',
-  'iss',
-  'groups',
-  'wids',
-  'ipaddr',
-  'uti',
-  'rh',
-  'nonce',
-  'aio',
-  'c_hash',
-  'at_hash'
-])
+const VISIBLE_CLAIMS = new Set(['ver', 'iat', 'nbf', 'exp', 'amr', 'roles'])
 
 function toRows(claims) {
   return Object.entries(claims).map(([name, value]) => [
     { text: name },
-    {
-      text: typeof value === 'object' ? JSON.stringify(value) : String(value),
-      ...(SENSITIVE_CLAIMS.has(name) && { classes: 'app-claim-blurred' })
-    }
+    { text: typeof value === 'object' ? JSON.stringify(value) : String(value) }
   ])
 }
 
+export function blurRows(rows, enabled) {
+  if (!enabled || !rows) {
+    return rows
+  }
+  return rows.map(([name, value]) =>
+    VISIBLE_CLAIMS.has(name.text)
+      ? [name, value]
+      : [name, { ...value, classes: 'app-claim-blurred' }]
+  )
+}
+
 /**
- * What goes in the session: only claims, never the tokens themselves.
+ * What goes in the session for display: only claims, never the tokens.
  * Access token claims (including app roles) are present only when the app
  * asks for its own api scope.
  */

@@ -1,4 +1,4 @@
-import { userFromCredentials } from './claims-view.js'
+import { blurRows, userFromCredentials } from './claims-view.js'
 import { fakeJwt } from '#/test-helpers/entra.js'
 
 describe('#userFromCredentials', () => {
@@ -14,17 +14,32 @@ describe('#userFromCredentials', () => {
     expect(user.roles).toEqual(['Regulator'])
     expect(user.idTokenRows).toContainEqual([
       { text: 'oid' },
-      { text: 'abc-123', classes: 'app-claim-blurred' }
+      { text: 'abc-123' }
     ])
   })
 
-  test('Does not blur harmless claims', () => {
-    const user = userFromCredentials(
-      { accessToken, claims: { ver: '2.0' } },
-      false
-    )
+  describe('#blurRows', () => {
+    const rows = [
+      [{ text: 'ver' }, { text: '2.0' }],
+      [{ text: 'given_name' }, { text: 'Test' }],
+      [{ text: 'login_hint' }, { text: 'abc' }]
+    ]
 
-    expect(user.idTokenRows).toContainEqual([{ text: 'ver' }, { text: '2.0' }])
+    test('Blurs every claim that is not on the harmless list', () => {
+      expect(blurRows(rows, true)).toEqual([
+        [{ text: 'ver' }, { text: '2.0' }],
+        [
+          { text: 'given_name' },
+          { text: 'Test', classes: 'app-claim-blurred' }
+        ],
+        [{ text: 'login_hint' }, { text: 'abc', classes: 'app-claim-blurred' }]
+      ])
+    })
+
+    test('Leaves the rows alone when blurring is off or there are none', () => {
+      expect(blurRows(rows, false)).toBe(rows)
+      expect(blurRows(null, true)).toBeNull()
+    })
   })
 
   test('Shows non-string claim values as JSON', () => {

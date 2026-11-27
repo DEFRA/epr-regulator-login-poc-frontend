@@ -155,6 +155,30 @@ describe('#auth controller', () => {
       expect(location.searchParams.get('id_token_hint')).toBe('the-id-token')
     })
 
+    test('Sends no hint when there is no ID token or it is too long', async () => {
+      await start({ ...entraSettings, 'auth.baseUrl': `${BASE_URL}/` })
+
+      const none = await server.inject('/logout')
+
+      server.plugins['hapi-auth-oidc'].oidc.callback = vi.fn(async () => ({
+        accessToken: fakeJwt({}),
+        idToken: 'x'.repeat(4000),
+        claims: { name: 'Test User' }
+      }))
+      const signIn = await server.inject('/signin-oidc?code=abc&state=xyz')
+      const cookie = signIn.headers['set-cookie']
+        .find((c) => c.startsWith('session='))
+        .split(';')[0]
+      const long = await server.inject({ url: '/logout', headers: { cookie } })
+
+      expect(
+        new URL(none.headers.location).searchParams.has('id_token_hint')
+      ).toBe(false)
+      expect(
+        new URL(long.headers.location).searchParams.has('id_token_hint')
+      ).toBe(false)
+    })
+
     test('Does not fail when Entra is not configured', async () => {
       await start({ ...entraSettings, 'auth.entraId.authority': '' })
 
