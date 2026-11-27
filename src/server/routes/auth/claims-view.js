@@ -6,10 +6,37 @@ export function decodeJwtPayload(token) {
   }
 }
 
+const SENSITIVE_CLAIMS = new Set([
+  'name',
+  'preferred_username',
+  'email',
+  'upn',
+  'unique_name',
+  'oid',
+  'sub',
+  'tid',
+  'aud',
+  'azp',
+  'appid',
+  'iss',
+  'groups',
+  'wids',
+  'ipaddr',
+  'uti',
+  'rh',
+  'nonce',
+  'aio',
+  'c_hash',
+  'at_hash'
+])
+
 function toRows(claims) {
   return Object.entries(claims).map(([name, value]) => [
     { text: name },
-    { text: typeof value === 'object' ? JSON.stringify(value) : String(value) }
+    {
+      text: typeof value === 'object' ? JSON.stringify(value) : String(value),
+      ...(SENSITIVE_CLAIMS.has(name) && { classes: 'app-claim-blurred' })
+    }
   ])
 }
 

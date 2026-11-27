@@ -1,1 +1,6 @@
 // import custom partial styles
+
+.app-claim-blurred {
+  filter: blur(6px);
+  user-select: none;
+}

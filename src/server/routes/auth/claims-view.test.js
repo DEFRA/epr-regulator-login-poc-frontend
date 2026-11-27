@@ -14,8 +14,17 @@ describe('#userFromCredentials', () => {
     expect(user.roles).toEqual(['Regulator'])
     expect(user.idTokenRows).toContainEqual([
       { text: 'oid' },
-      { text: 'abc-123' }
+      { text: 'abc-123', classes: 'app-claim-blurred' }
     ])
+  })
+
+  test('Does not blur harmless claims', () => {
+    const user = userFromCredentials(
+      { accessToken, claims: { ver: '2.0' } },
+      false
+    )
+
+    expect(user.idTokenRows).toContainEqual([{ text: 'ver' }, { text: '2.0' }])
   })
 
   test('Shows non-string claim values as JSON', () => {
