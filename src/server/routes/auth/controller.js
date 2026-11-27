@@ -2,6 +2,8 @@ import { config } from '#/config/config.js'
 import { userFromCredentials } from './claims-view.js'
 import { entraBaseUrl } from '#/server/plugins/entra-auth.js'
 
+const MAX_ID_TOKEN_HINT_LENGTH = 3500
+
 const SIGN_IN_FAILED = {
   pageTitle: 'Sign in failed',
   heading: 'Sign in failed',
@@ -45,6 +47,9 @@ export const signinController = {
           Boolean(config.get('auth.entraId.apiScope'))
         )
       )
+      if (credentials.idToken) {
+        request.yar.set('idToken', credentials.idToken)
+      }
       return h.redirect('/claims')
     } catch (error) {
       request.logger.warn(error, 'Sign in failed')
@@ -55,6 +60,7 @@ export const signinController = {
 
 export const logoutController = {
   handler(request, h) {
+    const idToken = request.yar.get('idToken')
     request.yar.reset()
     if (!config.get('auth.entraId.authority')) {
       return h.redirect('/signed-out')
@@ -62,6 +68,9 @@ export const logoutController = {
     const url = new URL(
       `${config.get('auth.entraId.authority').replace(/\/+$/, '')}/oauth2/v2.0/logout`
     )
+    if (idToken && idToken.length <= MAX_ID_TOKEN_HINT_LENGTH) {
+      url.searchParams.set('id_token_hint', idToken)
+    }
     url.searchParams.set(
       'post_logout_redirect_uri',
       `${entraBaseUrl()}/signed-out`

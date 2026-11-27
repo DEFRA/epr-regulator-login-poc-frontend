@@ -223,7 +223,7 @@ It is designed to encourage use and re-use of information freely and flexibly, w
 
 ## Entra ID sign-in proof of concept (ELSP-486 / AMCR-540)
 
-Sign in with Microsoft Entra ID, then `/claims` lists the claims held about the signed-in user (ID token claims, access token claims and app roles). Nothing else: no backend calls, no account lookup. Session holds claims only, never tokens.
+Sign in with Microsoft Entra ID, then `/claims` lists the claims held about the signed-in user (ID token claims, access token claims and app roles). Nothing else: no backend calls, no account lookup. The session holds the claims for display and the ID token (server-side only, used as `id_token_hint` on sign out); the access and refresh tokens are not kept.
 
 | Path                                     | Auth      | What                                                |
 | ---------------------------------------- | --------- | --------------------------------------------------- |
@@ -236,6 +236,7 @@ Sign in with Microsoft Entra ID, then `/claims` lists the claims held about the 
 | `APP_BASE_URL`                   | public URL; redirect URI is `<base>/signin-oidc`, post-logout `<base>/signed-out`                                                  |
 | `ENTRA_ID_AUTHORITY`             | `https://login.microsoftonline.com/<tenant id>`                                                                                    |
 | `ENTRA_ID_CLIENT_ID`             | app registration                                                                                                                   |
+| `CLAIMS_BLUR`                    | `true` (default) blurs personal and identifying claim values on `/claims` for demos; set `false` to show them                      |
 | `ENTRA_ID_API_SCOPE`             | `api://<client id>/.default`; the roles section and the access token claims are read from the access token, which needs this scope |
 | `ENTRA_ID_CREDENTIAL_TYPE`       | `federated` (default, CDP) or `secret` (local only)                                                                                |
 | `FEDERATED_CREDENTIALS_AUDIENCE` | audience of the federated credential (default `epr-regulator-login-poc-frontend`)                                                  |
@@ -248,7 +249,7 @@ Needs on the Entra side: redirect URI, post-logout URI, and on CDP a federated c
 
 ### Login process
 
-The app is the OIDC client (authorization code flow with PKCE, `@defra/hapi-auth-oidc`). On CDP it proves its identity to Entra ID with a federated credential (a short-lived AWS STS token) instead of a client secret. The session holds claims only, never tokens.
+The app is the OIDC client (authorization code flow with PKCE, `@defra/hapi-auth-oidc`). On CDP it proves its identity to Entra ID with a federated credential (a short-lived AWS STS token) instead of a client secret. The session is server-side only. It holds the claims for display and the ID token (used as `id_token_hint` on sign out); the access and refresh tokens are not kept.
 
 ```mermaid
 sequenceDiagram
@@ -272,7 +273,7 @@ sequenceDiagram
     App->>Entra: Fetch OIDC discovery document again
     App->>Entra: POST token endpoint (code, PKCE verifier, client_assertion = the STS token, reused from the cache)
     Entra-->>App: ID token and access token
-    App->>App: Validate ID token, read claims and roles (session holds claims only)
+    App->>App: Validate ID token, read claims and roles (session keeps claims and the ID token only)
     App-->>User: 302 /claims (session cookie set)
     User->>App: GET /claims
     App-->>User: 200 page listing the user's claims and roles

@@ -3,7 +3,7 @@
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 
 {% block content %}
-  {{ appHeading({ text: heading, caption: "Signed in as " + user.name }) }}
+  {{ appHeading({ text: heading, caption: "Signed in as " + user.name, captionClasses: captionClasses }) }}
 
   <h2 class="govuk-heading-m">Roles</h2>
   {% if user.roles | length %}

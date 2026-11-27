@@ -95,8 +95,13 @@ export const config = convict({
       doc: 'Log paths to redact',
       format: Array,
       default: isProduction
-        ? ['req.headers.authorization', 'req.headers.cookie', 'res.headers']
-        : [],
+        ? [
+            'req.headers.authorization',
+            'req.headers.cookie',
+            'res.headers',
+            'res.headers.location'
+          ]
+        : ['res.headers.location'],
       env: 'LOG_REDACT'
     }
   },
@@ -249,6 +254,14 @@ export const config = convict({
         format: 'nat',
         default: 1000 * 60 * 60 * 24 * 365
       }
+    }
+  },
+  claims: {
+    blur: {
+      doc: 'Blur personal and identifying claim values on the claims page, for demos',
+      format: Boolean,
+      default: true,
+      env: 'CLAIMS_BLUR'
     }
   },
   auth: {

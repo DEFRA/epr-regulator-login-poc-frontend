@@ -68,6 +68,52 @@ describe('#claimsController', () => {
     expect(response.payload).toContain('Access token claims')
   })
 
+  test('Blurs identifying values, including the name in the heading', async () => {
+    const cookie = await signIn()
+
+    const response = await server.inject({
+      url: '/claims',
+      headers: { cookie }
+    })
+
+    expect(response.payload).toMatch(
+      /<td[^>]*app-claim-blurred[^>]*>\s*abc-123/
+    )
+    expect(response.payload).toMatch(
+      /app-claim-blurred[^>]*>\s*Signed in as Test User/
+    )
+    expect(response.payload).not.toMatch(/app-claim-blurred[^>]*>\s*Platform/)
+  })
+
+  test('Does not blur when CLAIMS_BLUR is off', async () => {
+    const reset = setConfig({ 'claims.blur': false })
+    const cookie = await signIn()
+
+    const response = await server.inject({
+      url: '/claims',
+      headers: { cookie }
+    })
+    reset()
+
+    expect(response.payload).not.toContain('app-claim-blurred')
+  })
+
+  test('Never shows the ID token', async () => {
+    server.plugins['hapi-auth-oidc'].oidc.callback = vi.fn(async () => ({
+      accessToken,
+      idToken: 'secret-id-token',
+      claims: { name: 'Test User' }
+    }))
+    const cookie = await signIn()
+
+    const response = await server.inject({
+      url: '/claims',
+      headers: { cookie }
+    })
+
+    expect(response.payload).not.toContain('secret-id-token')
+  })
+
   test('Shows My claims and Sign out in the navigation', async () => {
     const cookie = await signIn()
 
