@@ -47,6 +47,11 @@ export const signinController = {
           Boolean(config.get('auth.entraId.apiScope'))
         )
       )
+      const logoutHint =
+        credentials.claims?.login_hint ?? credentials.claims?.preferred_username
+      if (logoutHint) {
+        request.yar.set('logoutHint', logoutHint)
+      }
       if (credentials.idToken) {
         request.yar.set('idToken', credentials.idToken)
       }
@@ -61,6 +66,7 @@ export const signinController = {
 export const logoutController = {
   handler(request, h) {
     const idToken = request.yar.get('idToken')
+    const logoutHint = request.yar.get('logoutHint')
     request.yar.reset()
     if (!config.get('auth.entraId.authority')) {
       return h.redirect('/signed-out')
@@ -68,6 +74,9 @@ export const logoutController = {
     const url = new URL(
       `${config.get('auth.entraId.authority').replace(/\/+$/, '')}/oauth2/v2.0/logout`
     )
+    if (logoutHint) {
+      url.searchParams.set('logout_hint', logoutHint)
+    }
     if (idToken && idToken.length <= MAX_ID_TOKEN_HINT_LENGTH) {
       url.searchParams.set('id_token_hint', idToken)
     }
