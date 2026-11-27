@@ -46,7 +46,7 @@ On CDP the service asks AWS STS for a short-lived token for its ECS task role an
 
 ```mermaid
 flowchart LR
-    B["Browser<br/>holds only the session cookie"] <--> FE
+    B["Browser<br/>holds cookies, never tokens"] <--> FE
     subgraph CDP["CDP (AWS)"]
         FE["CDP frontend<br/>Hapi frontend on ECS<br/>@defra/hapi-auth-oidc<br/>(the part we write)"]
         SS[("Session store<br/>claims, never tokens")]
@@ -70,15 +70,15 @@ The frontend is the only part we write. It reaches Entra ID through the CDP outb
 
 Seven parts work together; only the frontend is code we write.
 
-| Component           | What it is                                                                                                                | What it does in sign-in                                                                                                 |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Regulator's browser | The regulator's own browser                                                                                               | Follows redirects between the frontend and Entra ID; holds only a session cookie, never tokens                          |
-| CDP frontend        | A Hapi app on AWS ECS Fargate (in the proof of concept, `epr-regulator-login-poc-frontend`) using `@defra/hapi-auth-oidc` | Starts sign-in, receives the code back, exchanges it for tokens, checks them and keeps the user's claims in the session |
-| Session store       | `@hapi/yar`, always stored server-side: Redis on CDP, memory locally                                                      | Keeps the user's claims between page loads; the tokens themselves are never stored                                      |
-| Entra ID            | Defra's identity service: the `Defra` tenant for ext-test and prod, `defradev` for local, dev, test and perf-test         | Signs the regulator in (including MFA), then issues an ID token and an access token                                     |
-| App registration    | Entra ID's record of the service                                                                                          | Holds the client ID, the allowed redirect URLs, the Application ID URI and the federated credential                     |
-| AWS STS             | AWS's token service, called with the ECS task role                                                                        | Gives the frontend a short-lived token that proves which service it is, so no client secret is needed                   |
-| CDP outbound proxy  | CDP's egress proxy                                                                                                        | Lets the frontend reach `login.microsoftonline.com` and AWS STS; already allowed globally by CDP                        |
+| Component           | What it is                                                                                                                | What it does in sign-in                                                                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Regulator's browser | The regulator's own browser                                                                                               | Follows redirects between the frontend and Entra ID; holds the session cookie and, during sign-in, a short-lived encrypted sign-in cookie, never tokens |
+| CDP frontend        | A Hapi app on AWS ECS Fargate (in the proof of concept, `epr-regulator-login-poc-frontend`) using `@defra/hapi-auth-oidc` | Starts sign-in, receives the code back, exchanges it for tokens, checks them and keeps the user's claims in the session                                 |
+| Session store       | `@hapi/yar`, always stored server-side: Redis on CDP, memory locally                                                      | Keeps the user's claims between page loads; the tokens themselves are never stored                                                                      |
+| Entra ID            | Defra's identity service: the `Defra` tenant for ext-test and prod, `defradev` for local, dev, test and perf-test         | Signs the regulator in (including MFA), then issues an ID token and an access token                                                                     |
+| App registration    | Entra ID's record of the service                                                                                          | Holds the client ID, the allowed redirect URLs, the Application ID URI and the federated credential                                                     |
+| AWS STS             | AWS's token service, called with the ECS task role                                                                        | Gives the frontend a short-lived token that proves which service it is, so no client secret is needed                                                   |
+| CDP outbound proxy  | CDP's egress proxy                                                                                                        | Lets the frontend reach `login.microsoftonline.com` and AWS STS; already allowed globally by CDP                                                        |
 
 ## Sign-in flow
 
@@ -101,20 +101,20 @@ sequenceDiagram
     FE-->>B: claims saved, cookie set
 ```
 
-The frontend fetches the AWS token when sign-in starts and caches it, then sends it in place of a client secret when it exchanges the code (steps 5 and 6 in the next section).
+The frontend fetches the AWS token when sign-in starts and caches it (it lasts 5 minutes), then sends it in place of a client secret when it exchanges the code (steps 5 and 6 in the next section).
 
 ## How sign-in works, step by step
 
 A regulator is signed in after nine steps. The only one they see is the Microsoft sign-in page.
 
 1. **The regulator opens a page that needs sign-in.** The frontend finds no session and starts sign-in.
-2. **The frontend sends the browser to Entra ID.** The request carries the client ID, the return address `/signin-oidc`, the scopes it wants, and a one-time PKCE challenge, state and nonce that tie the reply to this request.
+2. **The frontend sends the browser to Entra ID.** The request carries the client ID, the return address `/signin-oidc`, the scopes it wants, and a one-time PKCE challenge, state and nonce that tie the reply to this request. The library keeps the matching PKCE verifier, state and nonce in a short-lived encrypted sign-in cookie, which it clears once the regulator is back.
 3. **The regulator signs in at Microsoft.** They enter their Defra account and complete MFA. If they are already signed in to Defra services, this step may pass without a prompt.
 4. **Entra ID sends the browser back.** It returns to `/signin-oidc` with a one-time code and the state from step 2.
-5. **The frontend proves who it is.** It gets a short-lived token from AWS STS for its ECS task role, which takes the place of a client secret (Q3). The library fetches it when sign-in starts and caches it, so it is ready here.
+5. **The frontend proves who it is.** It gets a short-lived token from AWS STS for its ECS task role, which takes the place of a client secret (Q3). The library fetches it when sign-in starts and caches it. The token lasts 5 minutes, so if it is within a minute of expiring here, the library fetches a new one.
 6. **The frontend exchanges the code for tokens.** Through the CDP outbound proxy it sends Entra ID the code, the PKCE verifier and the STS token. Entra ID checks the STS token against the federated credential on the app registration: the issuer, task role ARN and audience must all match.
 7. **Entra ID returns an ID token and an access token.** The ID token says who the regulator is. The access token is issued for the service's own API scope, `api://<client id>/.default`.
-8. **The frontend checks the tokens.** The library verifies the ID token's signature, issuer, audience, expiry and nonce. The frontend then reads the user's claims, such as `oid`, name and email.
+8. **The frontend checks the tokens.** The library checks the state and the ID token's issuer, audience, expiry and nonce. It does not check the ID token's signature: the token comes straight from Entra ID's token endpoint over HTTPS, which OpenID Connect allows. The frontend then reads the user's claims, such as `oid`, name and email.
 9. **The regulator is signed in.** The frontend keeps only the claims in the server-side session, discards the tokens, and gives the browser a session cookie.
 
 Locally the same flow runs against `defradev`, except that step 5 uses a short-lived client secret (`ENTRA_ID_CREDENTIAL_TYPE=secret`), because a laptop has no AWS task role. It uses dev's registration, which only allows `https` redirect URLs, so run the app with `npm run dev:https`: it puts an HTTPS proxy on port 3000 in front of the app on port 3001.
